@@ -138,12 +138,19 @@ int main(int argc, char **argv)
 	/********************************** Partition Multi Thread Matrix Multiplication ************************************
 ******************************************************************************************************************/
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
-
 	cout << "\n===========Start Partition Multi Thread Matrix Multiplication===========" << endl;
 
 	//Start pthread execution
 	gettimeofday(&start, NULL);
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
+	for (int i = 0; i < CORE_NUM; i++)
+	{
+		pthread_create(&pthread_Thread[i], NULL, Partition_Multi_Matrix_Multiplication, &Multi_Thread_Data[i]);
+	}
+	for (int i = 0; i < CORE_NUM; i++)
+	{
+		pthread_join(pthread_Thread[i], NULL);
+	}
 	gettimeofday(&end, NULL);
 	Time_Use = (end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / 1000000.0;
 	cout << "Partition Multi Thread Spend time : " << Time_Use << endl;
@@ -183,11 +190,13 @@ void *Global_Multi_Matrix_Multiplication(void *args)
 	cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is on CPU" << Core << endl;
 
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
-	// if (Thread->Core != Core)
-	// {
-	// 	Set_CPU(Thread->Core);
-	// 	cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is moved from CPU" << Core << " to CPU" << sched_getcpu() << endl;
-	// }
+	if (Thread->Core != Core)
+	{
+		pthread_mutex_lock(&count_mutex);
+		Set_CPU(Thread->Core);
+		cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is moved from CPU" << Core << " to CPU" << sched_getcpu() << endl;
+		pthread_mutex_unlock(&count_mutex);
+	}
 	for (int i = Thread->Start; i <= Thread->End; i++)
 	{
 		for (int j = 0; j < Thread->Total_Size; j++)
@@ -204,12 +213,24 @@ void *Global_Multi_Matrix_Multiplication(void *args)
 void *Partition_Multi_Matrix_Multiplication(void *args)
 {
 	Thread_Data *Thread = (struct Thread_Data *)args;
+	Set_CPU(Thread->Core);
 	int Core = sched_getcpu();
 	int PID = syscall(SYS_gettid);
 	pthread_mutex_lock(&count_mutex);
 	cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is on CPU" << Core << endl;
 	pthread_mutex_unlock(&count_mutex);
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
+	for (int i = Thread->Start; i <= Thread->End; i++)
+	{
+		for (int j = 0; j < Thread->Total_Size; j++)
+		{
+			Thread->Output_Matrix[i][j] = 0;
+			for (int k = 0; k < Thread->Total_Size; k++)
+			{
+				Thread->Output_Matrix[i][j] += Thread->Input_Matrix[i][k] * Thread->Input_Matrix[k][j];
+			}
+		}
+	}
 }
 
 void Print_Thread_Data(Thread_Data Thread)
