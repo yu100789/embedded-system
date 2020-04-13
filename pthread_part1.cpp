@@ -187,16 +187,8 @@ void *Global_Multi_Matrix_Multiplication(void *args)
 	Thread_Data *Thread = (struct Thread_Data *)args;
 	int Core = sched_getcpu();
 	int PID = syscall(SYS_gettid);
-	cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is on CPU" << Core << endl;
-
+	cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is on CPU " << Core << endl;
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
-	if (Thread->Core != Core)
-	{
-		pthread_mutex_lock(&count_mutex);
-		Set_CPU(Thread->Core);
-		cout << "The thread " << Thread->Thread_ID << " PID : " << PID << " is moved from CPU" << Core << " to CPU" << sched_getcpu() << endl;
-		pthread_mutex_unlock(&count_mutex);
-	}
 	for (int i = Thread->Start; i <= Thread->End; i++)
 	{
 		for (int j = 0; j < Thread->Total_Size; j++)
@@ -206,6 +198,11 @@ void *Global_Multi_Matrix_Multiplication(void *args)
 			{
 				Thread->Output_Matrix[i][j] += Thread->Input_Matrix[i][k] * Thread->Input_Matrix[k][j];
 			}
+			if ( Core != sched_getcpu() )
+				{
+					cout << "The thread " << Thread->Thread_ID << " PID " << PID << " is moved from CPU " << Core << " to " << sched_getcpu() << endl;
+					Core = sched_getcpu();
+				}	
 		}
 	}
 }
