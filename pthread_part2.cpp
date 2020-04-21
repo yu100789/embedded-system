@@ -307,12 +307,10 @@ int main(int argc, char** argv)
 			
 		}
 	}
-	int new_Num_Thread = Num_Thread;
 	for (int i = 0; i < Num_Thread; i++)
 	{
 		if(Thread_Set[i].Set_Core<0){
 			cout <<"Thread "<<Thread_Set[i].ID<<" is not push"<<endl;
-			new_Num_Thread--;
 		}
 	}
 	//Print 
@@ -323,18 +321,21 @@ int main(int argc, char** argv)
 	}
 	
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
-
 	//Start pthread execution
+	int executed[Num_Thread];
 	gettimeofday(&start, NULL);
-	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
-	for (int i = 0; i < new_Num_Thread; i++)
+	for (int i = 0; i < Num_Thread; i++)
 	{
-			pthread_create(&pthread_Thread[i], NULL,(THREADFUNCPTR)&Thread::Multi_Matrix_Multiplication,(void*)&Thread_Set[i]);
+		executed[i] = 1;
+		if(Thread_Set[i].Set_Core>=0)
+			executed[i] = pthread_create(&pthread_Thread[i], NULL,(THREADFUNCPTR)&Thread::Multi_Matrix_Multiplication,(void*)&Thread_Set[i]);
 	}
-	for (int i = 0; i < new_Num_Thread; i++)
+	for (int i = 0; i < Num_Thread; i++)
 	{
+		if(!executed[i])
 			pthread_join(pthread_Thread[i], NULL);
 	}
+	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
 	gettimeofday(&end, NULL);
 	Time_Use = (end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec)/1000000.0;
 	cout << "Multi Thread Spend time : " << Time_Use << endl;
@@ -392,13 +393,11 @@ int main(int argc, char** argv)
 			Thread_Set[j].Set_Thread_Core(max_index);
 		}
 	}
-	new_Num_Thread = Num_Thread;
 	for (int i = 0; i < Num_Thread; i++)
 	{
 		if(Thread_Set[i].Set_Core<0)
 		{
 			cout <<"Thread "<<Thread_Set[i].ID<<" is not push"<<endl;
-			new_Num_Thread--;
 		}
 	}
 	//Print 
@@ -412,12 +411,15 @@ int main(int argc, char** argv)
 
 	//Start pthread execution
 	gettimeofday(&start, NULL);
-	for (int i = 0; i < new_Num_Thread; i++)
+	for (int i = 0; i < Num_Thread; i++)
 	{
-			pthread_create(&pthread_Thread[i], NULL,(THREADFUNCPTR)&Thread::Multi_Matrix_Multiplication,(void*)&Thread_Set[i]);
+		executed[i] = 1;
+		if(Thread_Set[i].Set_Core>=0)
+			executed[i] = pthread_create(&pthread_Thread[i], NULL,(THREADFUNCPTR)&Thread::Multi_Matrix_Multiplication,(void*)&Thread_Set[i]);
 	}
-	for (int i = 0; i < new_Num_Thread; i++)
+	for (int i = 0; i < Num_Thread; i++)
 	{
+		if(!executed[i])
 			pthread_join(pthread_Thread[i], NULL);
 	}
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
@@ -441,6 +443,51 @@ int main(int argc, char** argv)
 	}
 	
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
+	float smallest_u[CORE_NUM];
+	for (int j = 0; j < Num_Thread;j++)
+	{
+		bitset<CORE_NUM> smallest_index;
+		for(int i=0; i < CORE_NUM; i++)
+		{
+			if(CPU_Set[i].Utilization+Thread_Set[j].Utilization<=1)
+			{
+				if(j==0){
+					CPU_Set[i].Push_Thread_To_CPU(Thread_Set[j].ID);
+					CPU_Set[i].Utilization+=Thread_Set[j].Utilization;
+					Thread_Set[j].Set_Thread_Core(i);
+					break;
+				}
+				smallest_u[i] = CPU_Set[i].Utilization+Thread_Set[j].Utilization;
+				smallest_index[i] = 1;
+			}
+		}
+		if(smallest_index.any())
+		{
+			int min_index;
+			float min = 1;
+			for(int i=0; i < CORE_NUM; i++)
+			{
+				if(smallest_index[i]==1)
+				{
+					if(smallest_u[i]<min)
+					{
+						min = smallest_u[i];
+						min_index = i ;
+					}
+				}
+			}
+			CPU_Set[min_index].Push_Thread_To_CPU(Thread_Set[j].ID);
+			CPU_Set[min_index].Utilization=min;
+			Thread_Set[j].Set_Thread_Core(min_index);
+		}
+	}
+	for (int i = 0; i < Num_Thread; i++)
+	{
+		if(Thread_Set[i].Set_Core<0)
+		{
+			cout <<"Thread "<<Thread_Set[i].ID<<" is not push"<<endl;
+		}
+	}
 
 	//Print 
 	for( int i = 0; i < CORE_NUM; i++)
@@ -450,9 +497,19 @@ int main(int argc, char** argv)
 	}
 	
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
-
 	//Start pthread execution
 	gettimeofday(&start, NULL);
+	for (int i = 0; i < Num_Thread; i++)
+	{
+		executed[i] = 1;
+		if(Thread_Set[i].Set_Core>=0)
+			executed[i] = pthread_create(&pthread_Thread[i], NULL,(THREADFUNCPTR)&Thread::Multi_Matrix_Multiplication,(void*)&Thread_Set[i]);
+	}
+	for (int i = 0; i < Num_Thread; i++)
+	{
+		if(!executed[i])
+			pthread_join(pthread_Thread[i], NULL);
+	}
 	/*~~~~~~~~~~~~~~~Your code~~~~~~~~~~~~~~~*/
 	gettimeofday(&end, NULL);
 	Time_Use = (end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec)/1000000.0;
